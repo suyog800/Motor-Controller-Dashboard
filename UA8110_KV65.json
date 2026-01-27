@@ -1,0 +1,38 @@
+{
+  "model_name": "UA8110_kv65",
+  "description": "48V, 1000W BLDC Motor",
+
+  "pole_pairs": 21,
+
+  "position_sensor": {
+    "type": "Absolute encoder",
+    "ppr": 2048,
+    "offset_deg": 12.5,
+    "direction": 1
+  },
+
+  "electrical": {
+    "phase_resistance_ohm": 0.25,
+    "phase_inductance_h": 7.150667e-05,
+    "bemf_constant_v_per_krpm": 6.2 
+  },
+
+  "default_gains": {
+    "iq": {
+      "kp": 0.25,
+      "ki": 1008.064516
+    },
+    "speed": {
+      "kp": 480.0,
+      "ki": 28560.0,
+      "kd": 0.0,
+      "tc": 0.0
+    },
+    "position": {
+      "kp": 3357.0,
+      "ki": 0.0,
+      "kd": 0.0,
+      "tc": 0.0
+    }
+  }
+}
