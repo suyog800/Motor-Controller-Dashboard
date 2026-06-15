@@ -542,6 +542,13 @@ ip -details link show can0
 ---
 
 ## Notes
+## Motor Parameters and Pre-Tuned Gains
+
+Motor parameters and gains for some pre-tuned motors are available in the following Excel file:
+
+[Click here to open Motor Charastics.xlsx](https://optivalhealthsolutions-my.sharepoint.com/:x:/r/personal/suyog_ch_optivalhealthsolutions_onmicrosoft_com/Documents/Motor%20Charastics.xlsx?d=w4f0457540f744b2aa9a45eddf709d8af&csf=1&web=1&e=ggayEA)
+
+Use this file as a reference when selecting motor parameters, current-loop gains, velocity-loop gains, and position-loop gains for supported motors.
 
 * The CAN bitrate is fixed at **500 kbps** for this motor driver setup.
 * The default CAN channel used by the GUI is `can0`.
