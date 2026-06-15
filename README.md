@@ -159,10 +159,8 @@ For example:
 Run the Python script:
 
 ```bash
-python3 canopen_tool.py
+python3 canopen_gui_v3.py
 ```
-
-Replace `canopen_tool.py` with the actual filename if different.
 
 ---
 
