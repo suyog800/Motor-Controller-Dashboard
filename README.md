@@ -479,7 +479,25 @@ Hex equivalent:
 ```text
 15 = 0x000F
 ```
+### Set Controlword
 
+Click:
+
+```text
+Set Controlword = 0x000F
+```
+
+This writes:
+
+```text
+0x000F
+```
+
+to CANopen object:
+
+```text
+0x6040 - Controlword
+```
 After this command, the controller is enabled and starts acting on the motor based on the configured gains, selected mode of operation, acceleration/deceleration values, and incoming command references.
 
 ---
@@ -544,28 +562,10 @@ Recommended sequence:
 
 Do not change the control mode while the motor is actively engaged unless the application has been specifically designed to handle that transition safely.
 
-
-### Set Controlword
-
-Click:
-
-```text
-Set Controlword = 0x000F
-```
-
-This writes:
-
-```text
-0x000F
-```
-
-to CANopen object:
-
-```text
-0x6040 - Controlword
-```
-
 ---
+
+
+
 
 ## TPDO to UDP JSON Streaming
 
