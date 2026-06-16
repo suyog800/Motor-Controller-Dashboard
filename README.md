@@ -294,6 +294,257 @@ For node ID `2`, the PDO COB-IDs become:
 | TPDO3 | `0x382` |
 | TPDO4 | `0x482` |
 
+
+## Mental Model for Programming the Motion Controller
+
+Programming the Motion Controller can be understood in three main stages:
+
+1. Connect to the CANopen node
+2. Initialize motor parameters
+3. Enable the controller and send motion commands
+
+The important point is that **putting the node into Operational state does not automatically engage the motor**. Operational state enables PDO communication. The motor is engaged only after the controller is enabled using the controlword.
+
+---
+
+## 1. Connect to the CANopen Node
+
+The first step is to establish communication with the CANopen node.
+
+Typical setup:
+
+* Bring up the CAN interface, for example `can0`
+* Use the fixed CAN bitrate of `500 kbps`
+* Select the correct node ID
+* Load the correct EDS/DCF file
+* Connect to the node from the GUI
+
+After connection, verify communication by reading a known object such as:
+
+```text
+0x1000 - Device Type
+```
+
+You can also configure the heartbeat producer time using:
+
+```text
+0x1017 - Producer Heartbeat Time
+```
+
+At this stage, the device can communicate using SDOs.
+
+---
+
+## 2. Initialize Motor Parameters
+
+After basic communication is working, set the node to `OPERATIONAL`.
+
+In `OPERATIONAL` state, the drive can communicate using both SDOs and PDOs. However, the motor is still not engaged until the controlword is set to enable operation.
+
+During initialization, configure the parameters required for your selected control mode.
+
+Recommended initialization order:
+
+1. Set current-loop gains
+2. Set velocity-loop gains
+3. Set position-loop gains
+4. Select the required control mode
+5. Set acceleration and deceleration values if required
+
+---
+
+### Set Current-Loop Gains
+
+Use RPDO2 to configure the current-loop gains.
+
+| PDO   |            COB-ID | Purpose            |
+| ----- | ----------------: | ------------------ |
+| RPDO2 | `0x300 + node_id` | Current-loop gains |
+
+Typical parameters:
+
+|   Object | Description                                    |
+| -------: | ---------------------------------------------- |
+| `0x2200` | q-axis current-loop proportional gain, `iq_kp` |
+| `0x2201` | q-axis current-loop integral gain, `iq_ki`     |
+
+---
+
+### Set Velocity-Loop Gains
+
+Use RPDO3 to configure the velocity-loop gains.
+
+| PDO   |            COB-ID | Purpose             |
+| ----- | ----------------: | ------------------- |
+| RPDO3 | `0x400 + node_id` | Velocity-loop gains |
+
+Typical parameters:
+
+|   Object | Description                                               |
+| -------: | --------------------------------------------------------- |
+| `0x2202` | Velocity-loop proportional gain, `speed_kp`               |
+| `0x2203` | Velocity-loop integral gain, `speed_ki`                   |
+| `0x2204` | Velocity-loop derivative gain, `speed_kd`                 |
+| `0x2205` | Velocity-loop derivative filter time constant, `speed_Tc` |
+
+For these gain values, multiply the required value by `100` before sending.
+
+Example:
+
+```text
+Required Kp = 0.3
+Value to send = 0.3 × 100 = 30
+```
+
+---
+
+### Set Position-Loop Gains
+
+Use RPDO4 to configure the position-loop gains.
+
+| PDO   |            COB-ID | Purpose             |
+| ----- | ----------------: | ------------------- |
+| RPDO4 | `0x500 + node_id` | Position-loop gains |
+
+Typical parameters:
+
+|   Object | Description                                             |
+| -------: | ------------------------------------------------------- |
+| `0x2206` | Position-loop proportional gain, `pos_kp`               |
+| `0x2207` | Position-loop integral gain, `pos_ki`                   |
+| `0x2208` | Position-loop derivative gain, `pos_kd`                 |
+| `0x2209` | Position-loop derivative filter time constant, `pos_Tc` |
+
+For these gain values, multiply the required value by `100` before sending.
+
+---
+
+### Select Mode of Operation
+
+Select the required control mode by setting:
+
+```text
+0x6060 - Modes of Operation
+```
+
+Common mode values:
+
+| Value | Mode                             |
+| ----: | -------------------------------- |
+|   `1` | Profile Position Mode            |
+|   `3` | Profile Velocity Mode            |
+|   `4` | Torque / Iq Control Mode         |
+|   `8` | Cyclic Synchronous Position Mode |
+|   `9` | Cyclic Synchronous Velocity Mode |
+
+The drive reports the currently active mode through:
+
+```text
+0x6061 - Modes of Operation Display
+```
+
+---
+
+### Set Acceleration and Deceleration
+
+Use RPDO6 to configure acceleration and deceleration.
+
+| PDO   |            COB-ID | Purpose                       |
+| ----- | ----------------: | ----------------------------- |
+| RPDO6 | `0x690 + node_id` | Acceleration and deceleration |
+
+Typical parameters:
+
+|   Object | Description         |
+| -------: | ------------------- |
+| `0x6083` | Target acceleration |
+| `0x6084` | Target deceleration |
+
+Acceleration and deceleration values are in `rps²`.
+
+Multiply the required value by `100` before sending.
+
+---
+
+## 3. Enable the Controller and Send Commands
+
+After all required parameters are initialized, engage the motor by setting the controlword to `15`.
+
+```text
+0x6040 - Controlword = 15
+```
+
+Hex equivalent:
+
+```text
+15 = 0x000F
+```
+
+After this command, the controller is enabled and starts acting on the motor based on the configured gains, selected mode of operation, acceleration/deceleration values, and incoming command references.
+
+---
+
+### Sending Motion Commands
+
+Use the appropriate RPDO depending on the selected mode of operation.
+
+RPDO1 is used for controlword, mode, and torque/Iq command.
+
+| PDO   |            COB-ID | Purpose                      |
+| ----- | ----------------: | ---------------------------- |
+| RPDO1 | `0x200 + node_id` | Controlword, mode, target Iq |
+
+RPDO5 is used for target position and target velocity.
+
+| PDO   |            COB-ID | Purpose                             |
+| ----- | ----------------: | ----------------------------------- |
+| RPDO5 | `0x680 + node_id` | Target position and target velocity |
+
+In position control mode, RPDO5 can be used to send:
+
+* Target position
+* Target velocity
+
+In velocity control mode, RPDO5 can be used to send:
+
+* Target velocity
+
+In velocity control mode, the target position field is not considered by the controller.
+
+---
+
+## 4. Monitor Motor Data Using TPDOs
+
+After the controller is enabled and commands are being sent, monitor real-time feedback using TPDOs.
+
+### TPDO Feedback Mapping
+
+| PDO   |            COB-ID | Purpose                          |
+| ----- | ----------------: | -------------------------------- |
+| TPDO1 | `0x180 + node_id` | Position feedback                |
+| TPDO2 | `0x280 + node_id` | Velocity feedback                |
+| TPDO3 | `0x380 + node_id` | Current feedback                 |
+| TPDO4 | `0x480 + node_id` | Commanded internal motion values |
+
+TPDO feedback helps verify whether the motor is following the commanded position, velocity, and current references correctly.
+
+---
+
+## Important Note: Changing Mode of Operation
+
+If you want to change the `mode_of_operation`, first disengage the motor.
+
+Recommended sequence:
+
+1. Set the controlword to `0`
+2. Change `mode_of_operation`
+3. Set the appropriate gain values for the new mode
+4. Set acceleration and deceleration values if required
+5. Set the controlword to `15` to engage the motor again
+
+Do not change the control mode while the motor is actively engaged unless the application has been specifically designed to handle that transition safely.
+
+
 ### Set Controlword
 
 Click:
